@@ -84,52 +84,18 @@ public class SheepController : MonoBehaviour {
             SetStateToHungry();
         }
 
-        if (!targetExists || Vector3.Distance(this.transform.position, target) < minDistanceToTarget)
+        if (!targetExists || DistanceToVector(target) < minDistanceToTarget)
         {
             GetNewTargetVector();
         }
-        MoveSheep();
+        MoveWhileAvoidingThingsSheep();
     }
 
     private void SetStateToHungry()
     {
         currentState.Push(SheepStates.Hungry);
-        
-        RaycastHit[] hits = GetVisibleObjects();
-        if (hits.Length > 0)
-        {
-            //Get the closest edible object
-            float closestDistance = viewRadius * 2; //Make the min more then it could possibly be
-            GameObject closetObject = null;
-            foreach (RaycastHit hit in hits)
-            {
-                EdibleTrait trait = hit.transform.gameObject.GetComponent<EdibleTrait>();
-                if (trait)
-                {
-                    float dis = Vector3.Distance(this.transform.position, hit.transform.position);
-                    if (dis < closestDistance)
-                    {
-                        closestDistance = dis;
-                        closetObject = hit.transform.gameObject;
-                        targetEdibleTrait = trait;
-                        foundFood = true;
-                    }
-                }
-            }
-            if (foundFood)
-            {
-                if(closetObject != null)
-                {
-                    target = closetObject.transform.position;
-                    target.y = this.transform.position.y;
-                    targetExists = true;
-                }
-                else
-                {
-                    foundFood = false;
-                }
-            }
-        }
+        targetExists = false;
+        foundFood = false;
     }
 
     private void HungryStateFunction()
@@ -138,7 +104,7 @@ public class SheepController : MonoBehaviour {
         {
             if (foundFood)
             {
-                if(targetExists && DistanceToVector(target) < eatDistance)
+                if(DistanceToVector(target) < eatDistance)
                 {
                     if(targetEdibleTrait != null)
                     {
@@ -152,33 +118,43 @@ public class SheepController : MonoBehaviour {
                 }
                 else
                 {
-                    MoveSheep();
+                    MoveToPoint(foundFood);
                 }
             }
             else
             {
                 RaycastHit[] hits = GetVisibleObjects();
-                //Get the closest edible thing
-                if (hits.Length == 1)
+                List<EdibleTrait> traitHits = new List<EdibleTrait>();
+                foreach (RaycastHit hit in hits)
                 {
-                    EdibleTrait trait = hits[0].transform.gameObject.GetComponent<EdibleTrait>();
-                    targetEdibleTrait = trait;
+                    EdibleTrait trait = hit.transform.GetComponent<EdibleTrait>();
+                    if (trait)
+                    {
+                        traitHits.Add(trait);
+                    }
+                }
+
+                //Get the closest edible thing
+                if (traitHits.Count == 1)
+                {
+                    targetEdibleTrait = traitHits[0];
+                    target = hits[0].transform.position;
+                    targetExists = true;
                     foundFood = true;
                 }
-                else if (hits.Length > 0)
+                else if (traitHits.Count > 0)
                 {
                     float closestDistance = viewRadius * 2; //Make the  min more then it could possibly be
                     GameObject closetObject = null;
-                    foreach (RaycastHit hit in hits)
+                    foreach (EdibleTrait trait in traitHits)
                     {
-                        EdibleTrait trait = hit.transform.gameObject.GetComponent<EdibleTrait>();
                         if (trait)
                         {
-                            float dis = Vector3.Distance(this.transform.position, hit.transform.position);
+                            float dis = Vector3.Distance(this.transform.position, trait.gameObject.transform.position);
                             if (dis < closestDistance)
                             {
                                 closestDistance = dis;
-                                closetObject = hit.transform.gameObject;
+                                closetObject = trait.gameObject;
                                 targetEdibleTrait = trait;
                                 foundFood = true;
                             }
@@ -189,7 +165,6 @@ public class SheepController : MonoBehaviour {
                         if (closetObject != null)
                         {
                             target = closetObject.transform.position;
-                            target.y = this.transform.position.y;
                         }
                         else
                         {
@@ -198,13 +173,14 @@ public class SheepController : MonoBehaviour {
                     }
                     else
                     {
-                        if (targetExists && Vector3.Distance(this.transform.position, target) < minDistanceToTarget || !targetExists)
+                        if (foundFood && Vector3.Distance(this.transform.position, target) < minDistanceToTarget || !foundFood)
                         {
                             GetNewTargetVector();
                         }
-                        MoveSheep();
+                        MoveWhileAvoidingThingsSheep();
                     }
                 }
+                MoveToPoint(foundFood);
             }
         }
         else
@@ -215,9 +191,10 @@ public class SheepController : MonoBehaviour {
     }
 
     Vector3 moveTo = Vector3.zero;
-    public void MoveSheep()
+    public void MoveWhileAvoidingThingsSheep()
     {
         //Make the sheep avoid other objects in the scene
+        //TODO: Avoidance counts itself
         RaycastHit[] hits = Physics.SphereCastAll(new Ray(this.transform.position, Vector3.up), collisionAvoidCheckDistance, 0);
         Vector3 avoidance = Vector3.zero;
         if (hits.Length > 0)
@@ -234,8 +211,9 @@ public class SheepController : MonoBehaviour {
             Vector3 targetMovement = (target - this.transform.position).normalized * speed + avoidance * avoidanceAmount;
             targetMovement.Normalize();
             moveTo = (targetMovement * speed * Time.deltaTime);
+            moveTo.y = 0;
             Vector3 newPosition = this.transform.position + moveTo;
-            newPosition.y = this.transform.position.y;
+            
             Vector3 origin = this.transform.position + this.transform.forward + moveTo.normalized / 2;
             bool movementHits = Physics.CheckBox(origin, moveTo.normalized);
             if (movementHits)
@@ -252,6 +230,17 @@ public class SheepController : MonoBehaviour {
         }
     }
 
+    public void MoveToPoint(bool targetExistance)
+    {
+        if (targetExistance)
+        {
+            Vector3 moveToPoint = target - this.transform.position;
+            moveToPoint.Normalize();
+            moveToPoint.y = 0;
+            rb.MovePosition(this.transform.position + moveToPoint * speed * Time.deltaTime);
+        }
+    }
+
     public void GetNewTargetVector()
     {
         Vector3 newTarget = this.transform.position + Random.insideUnitSphere*5;
@@ -261,7 +250,10 @@ public class SheepController : MonoBehaviour {
 
     private float DistanceToVector(Vector3 definedTarget)
     {
-        return Vector3.Distance(this.transform.position, definedTarget);
+        float dis = (Mathf.Sqrt(Mathf.Pow(this.transform.position.x - definedTarget.x, 2) + 0 
+                        + Mathf.Pow(this.transform.position.z - definedTarget.z, 2)));
+        Debug.Log(dis);
+        return dis;
     }
     
     private void OnCollisionEnter(Collision collision)

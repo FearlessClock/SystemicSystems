@@ -59,7 +59,7 @@ public class FlammableTrait : MonoBehaviour {
                 EdibleTrait trait = GetComponent<EdibleTrait>();
                 if (trait)
                 {
-                    trait.enabled = false;
+                    Destroy(trait);  //.enabled = false;
                 }
                 //TODO: Sizzle out effect
             }
