@@ -1,8 +1,9 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum SheepStates { Idle, Hungry }
+public enum SheepStates { Idle, Hungry, Scared }
 public class SheepController : MonoBehaviour {
     //TODO: Make the sheep flee from fire
     public float viewRadius;
@@ -15,10 +16,11 @@ public class SheepController : MonoBehaviour {
     Rigidbody rb;
     public float minDistanceToTarget;
     public float collisionAvoidCheckDistance;
+    Vector3 moveTo = Vector3.zero;
 
     [Header("State stuff")]
-    private Stack<SheepStates> currentState;
     public SheepStates startingState;
+    private Stack<SheepStates> currentState;
 
     [Header("Hungry state vars")]
     public float hungerLevel;
@@ -28,6 +30,10 @@ public class SheepController : MonoBehaviour {
     private bool foundFood;
     public float eatDistance;
     private EdibleTrait targetEdibleTrait;
+
+    [Header("Scared state vars")]
+    public float minDistanceToScaredObj;
+    private List<GameObject> scaredOfObjects;
 
     // Use this for initialization
     void Start () {
@@ -39,18 +45,28 @@ public class SheepController : MonoBehaviour {
         currentState = new Stack<SheepStates>();
         currentState.Push(startingState);
 
-        maxFoodLevel += Random.Range(-5f, 5f);
-        hungerLevel += Random.Range(-1f, 1f);
-        foodConsumeRate += Random.Range(-0.005f, 0.005f);
+        scaredOfObjects = new List<GameObject>();
+
+        maxFoodLevel += UnityEngine.Random.Range(-5f, 5f);
+        hungerLevel += UnityEngine.Random.Range(-1f, 1f);
+        foodConsumeRate += UnityEngine.Random.Range(-0.005f, 0.005f);
         cantTakeItAnymoreHungerLevel = maxFoodLevel / 2;
     }
 	
 	// Update is called once per frame
 	void Update () {
+
         //TODO: Make this happen less or from what the sheep is doing
         ConsumeFood();
         startingState = currentState.Peek();    //Debug, remove when done
-        switch (currentState.Peek())
+        SheepStates currentSheepState = currentState.Peek();
+        //Check to see if there are scary things around the sheep to make it flee
+        if (currentSheepState != SheepStates.Scared && CheckScaryThingsAround().Length > 0)
+        {
+            SetStateToScared();
+        }
+
+        switch (currentSheepState)
         {
             case SheepStates.Idle:
                 GetComponent<MeshRenderer>().materials[0].color = Color.blue;
@@ -60,9 +76,39 @@ public class SheepController : MonoBehaviour {
                 GetComponent<MeshRenderer>().materials[0].color = Color.red;
                 HungryStateFunction();
                 break;
+            case SheepStates.Scared:
+                GetComponent<MeshRenderer>().materials[0].color = Color.green;
+                ScaredStateFunction();
+                break;
             default:
                 break;
         }
+    }
+    /// <summary>
+    /// Check if any scary Things are around
+    /// </summary>
+    private GameObject[] CheckScaryThingsAround()
+    {
+        scaredOfObjects.Clear();
+        RaycastHit[] surroundingObjects = GetVisibleObjects();
+
+        //TODO: Make sure to run away from the closest enemy
+        foreach (RaycastHit hit in surroundingObjects)
+        {
+            FlammableTrait flammableTrait = hit.transform.GetComponent<FlammableTrait>();
+            if (flammableTrait)
+            {
+                if (flammableTrait.isBurning)
+                {
+                    scaredOfObjects.Add(flammableTrait.gameObject);
+                }
+                continue;
+            }
+
+            //Other scary traits for a sheep (Like wolves, coming soon)
+        }
+
+        return scaredOfObjects.ToArray();
     }
 
     private void ConsumeFood()
@@ -125,6 +171,7 @@ public class SheepController : MonoBehaviour {
             {
                 RaycastHit[] hits = GetVisibleObjects();
                 List<EdibleTrait> traitHits = new List<EdibleTrait>();
+                //TODO: This is quite ineffective if there is only one element
                 foreach (RaycastHit hit in hits)
                 {
                     EdibleTrait trait = hit.transform.GetComponent<EdibleTrait>();
@@ -180,6 +227,14 @@ public class SheepController : MonoBehaviour {
                         MoveWhileAvoidingThingsSheep();
                     }
                 }
+                else if(traitHits.Count == 0)
+                {
+                    if (targetExists && DistanceToVector(target) < minDistanceToTarget || !targetExists)
+                    {
+                        GetNewTargetVector();
+                    }
+                    MoveWhileAvoidingThingsSheep();
+                }
                 MoveToPoint(foundFood);
             }
         }
@@ -190,7 +245,40 @@ public class SheepController : MonoBehaviour {
         }
     }
 
-    Vector3 moveTo = Vector3.zero;
+    private void SetStateToScared()
+    {
+        currentState.Push(SheepStates.Scared);
+    }
+
+    private bool IsScaredOfObj(GameObject obj)
+    {
+        if (obj.GetComponent<FlammableTrait>().isBurning)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    private void ScaredStateFunction()
+    {
+        CheckScaryThingsAround();
+        Vector3 scaredOfDirection = Vector3.zero;
+        foreach (GameObject scaryThing in scaredOfObjects)
+        {
+            Vector3 toTheObj = this.transform.position - scaryThing.transform.position;
+            toTheObj = toTheObj.normalized;
+            scaredOfDirection += toTheObj;
+        }
+
+        target = this.transform.position + scaredOfDirection;
+        MoveToPoint(scaredOfObjects.Count > 0);
+
+        if (scaredOfObjects.Count == 0)
+        {
+            currentState.Pop();
+        }
+    }
+
     public void MoveWhileAvoidingThingsSheep()
     {
         //Make the sheep avoid other objects in the scene
@@ -243,7 +331,7 @@ public class SheepController : MonoBehaviour {
 
     public void GetNewTargetVector()
     {
-        Vector3 newTarget = this.transform.position + Random.insideUnitSphere*5;
+        Vector3 newTarget = this.transform.position + UnityEngine.Random.insideUnitSphere*5;
         targetExists = true;
         target = newTarget;
     }
