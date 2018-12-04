@@ -306,14 +306,13 @@ public class SheepController : MonoBehaviour {
             bool movementHits = Physics.CheckBox(origin, moveTo.normalized);
             if (movementHits)
             {
-                Debug.Log("You hit a wall!");
                 targetExists = false;
             }
             else
             {
                 rb.MovePosition(newPosition);
 
-                //rb.MoveRotation(Quaternion.LookRotation(moveTo.normalized, Vector3.up));
+                rb.MoveRotation(Quaternion.LookRotation(moveTo.normalized, Vector3.up));
             }
         }
     }
@@ -340,7 +339,6 @@ public class SheepController : MonoBehaviour {
     {
         float dis = (Mathf.Sqrt(Mathf.Pow(this.transform.position.x - definedTarget.x, 2) + 0 
                         + Mathf.Pow(this.transform.position.z - definedTarget.z, 2)));
-        Debug.Log(dis);
         return dis;
     }
     
