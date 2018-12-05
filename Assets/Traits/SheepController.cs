@@ -130,7 +130,7 @@ public class SheepController : MonoBehaviour {
             SetStateToHungry();
         }
 
-        if (!targetExists || DistanceToVector(target) < minDistanceToTarget)
+        if (!targetExists || Helper.DistanceToVector(this.transform.position, target) < minDistanceToTarget)
         {
             GetNewTargetVector();
         }
@@ -150,7 +150,7 @@ public class SheepController : MonoBehaviour {
         {
             if (foundFood)
             {
-                if(DistanceToVector(target) < eatDistance)
+                if(Helper.DistanceToVector(this.transform.position, target) < eatDistance)
                 {
                     if(targetEdibleTrait != null)
                     {
@@ -229,7 +229,7 @@ public class SheepController : MonoBehaviour {
                 }
                 else if(traitHits.Count == 0)
                 {
-                    if (targetExists && DistanceToVector(target) < minDistanceToTarget || !targetExists)
+                    if (targetExists && Helper.DistanceToVector(this.transform.position, target) < minDistanceToTarget || !targetExists)
                     {
                         GetNewTargetVector();
                     }
@@ -335,12 +335,7 @@ public class SheepController : MonoBehaviour {
         target = newTarget;
     }
 
-    private float DistanceToVector(Vector3 definedTarget)
-    {
-        float dis = (Mathf.Sqrt(Mathf.Pow(this.transform.position.x - definedTarget.x, 2) + 0 
-                        + Mathf.Pow(this.transform.position.z - definedTarget.z, 2)));
-        return dis;
-    }
+    
     
     private void OnCollisionEnter(Collision collision)
     {
