@@ -20,6 +20,12 @@ public class FlammableTrait : MonoBehaviour {
 	void Update () {
         if (isBurning)
         {
+            //Check if the thing is hit with a water trait
+            if (CheckForWater())
+            {
+                PutOutFire();
+                return;
+            }
             //After a defined time, check if something burnable exists
             burnCheckTimer -= Time.deltaTime;
             if(burnCheckTimer <= 0)
@@ -53,17 +59,17 @@ public class FlammableTrait : MonoBehaviour {
             burntime -= Time.deltaTime;
             if(burntime <= 0)
             {
-                isBurning = false;
-                GetComponent<MeshRenderer>().materials[0].color = Color.grey;
-                burningParticleEffect.Stop(true);
+                PutOutFire();
                 EdibleTrait trait = GetComponent<EdibleTrait>();
                 if (trait)
                 {
                     Destroy(trait);  //.enabled = false;
                 }
+                //Destroy the fire trait to indicate that the thing isn't flammable anymore
+                Destroy(this, 1);
+                GetComponent<MeshRenderer>().materials[0].color = Color.grey;
                 //TODO: Sizzle out effect
             }
-            //Do stuff
         }
 	}
 
@@ -74,6 +80,28 @@ public class FlammableTrait : MonoBehaviour {
         burningParticleEffect.Play(true);
     }
 
+    public void PutOutFire()
+    {
+        //TODO: Make the resulting color of the object be infunction of the amount burned
+        isBurning = false;
+        GetComponent<MeshRenderer>().materials[0].color = Color.yellow;
+        burningParticleEffect.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+    }
+    
+    public bool CheckForWater()
+    {
+        Collider[] res = Physics.OverlapBox(this.transform.position, Vector3.one, Quaternion.identity);
+        List<WaterTrait> traits = new List<WaterTrait>();
+        foreach (Collider coll in res)
+        {
+            WaterTrait waterTrait = coll.transform.GetComponent<WaterTrait>();
+            if (waterTrait)
+            {
+                traits.Add(waterTrait);
+            }
+        }
+        return traits.Count > 0;
+    }
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.red;

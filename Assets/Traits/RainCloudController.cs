@@ -41,6 +41,17 @@ public class RainCloudController : MonoBehaviour {
 
     void UpdateState()
     {
+        WindTrait[] windTraits = GetWindTraits();
+        if (windTraits != null)
+        {
+            direction = Vector3.zero;
+            foreach (WindTrait trait in windTraits)
+            {
+                direction += trait.GetWindVector();
+            }
+
+            direction /= windTraits.Length;
+        }
         if(lastRainState != currentRainState)
         {
             currentRainParticleSystem.Stop();
@@ -66,6 +77,30 @@ public class RainCloudController : MonoBehaviour {
         }
         lastRainState = currentRainState;
     }
+
+    private WindTrait[] GetWindTraits()
+    {
+        Collider[] res = Physics.OverlapBox(this.transform.position, Vector3.one, Quaternion.identity);
+        List<WindTrait> traits = new List<WindTrait>();
+        foreach (Collider coll in res)
+        {
+            WindTrait windTrait = coll.transform.GetComponent<WindTrait>();
+            if (windTrait)
+            {
+                Debug.Log("Found wind " + this.name);
+                traits.Add(windTrait);
+            }
+        }
+        if (traits.Count > 0)
+        {
+            return traits.ToArray();
+        }
+        else
+        {
+            return null;
+        }
+    }
+
     /// <summary>
     /// Coroutine to throw thunder at random times;
     /// </summary>
