@@ -4,23 +4,24 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public enum SheepStates { Idle, Hungry, Scared }
-public class SheepController : MonoBehaviour {
+public class SheepController : Animal {
     //TODO: Make the sheep flee from fire
     public float viewRadius;
+    HealthTrait healthTrait;
+    public bool isAlive;
 
     [Header("Movement")]
     public float speed;
     public float avoidanceAmount;
     public Vector3 target;
     private bool targetExists;
-    Rigidbody rb;
     public float minDistanceToTarget;
     public float collisionAvoidCheckDistance;
     Vector3 moveTo = Vector3.zero;
 
     [Header("State stuff")]
     public SheepStates startingState;
-    private Stack<SheepStates> currentState;
+    private new Stack<SheepStates> currentState;
 
     [Header("Hungry state vars")]
     public float hungerLevel;
@@ -36,7 +37,8 @@ public class SheepController : MonoBehaviour {
     private List<GameObject> scaredOfObjects;
 
     // Use this for initialization
-    void Start () {
+    protected override void Start () {
+        base.Start();
         rb = this.GetComponent<Rigidbody>();
         GetNewTargetVector();
         targetExists = true;
@@ -51,11 +53,20 @@ public class SheepController : MonoBehaviour {
         hungerLevel += UnityEngine.Random.Range(-1f, 1f);
         foodConsumeRate += UnityEngine.Random.Range(-0.005f, 0.005f);
         cantTakeItAnymoreHungerLevel = maxFoodLevel / 2;
-    }
-	
-	// Update is called once per frame
-	void Update () {
 
+        healthTrait = GetComponent<HealthTrait>();
+        isAlive = true;
+        healthTrait.thingDied.AddListener(() => { Debug.Log("The sheep died");  isAlive = false; });
+    }
+
+    // Update is called once per frame
+    protected override void Update () {
+        if (!isAlive)
+        {
+            this.GetComponent<MeshRenderer>().materials[0].color = Color.grey;
+            this.enabled = false;
+        }
+        base.Update();
         //TODO: Make this happen less or from what the sheep is doing
         ConsumeFood();
         startingState = currentState.Peek();    //Debug, remove when done
@@ -104,6 +115,12 @@ public class SheepController : MonoBehaviour {
                 }
                 continue;
             }
+            WolfController wolfController = hit.transform.GetComponent<WolfController>();
+            if (wolfController)
+            {
+                scaredOfObjects.Add(wolfController.gameObject);
+                continue;
+            }
 
             //Other scary traits for a sheep (Like wolves, coming soon)
         }
@@ -114,6 +131,10 @@ public class SheepController : MonoBehaviour {
     private void ConsumeFood()
     {
         hungerLevel -= foodConsumeRate;
+        if(hungerLevel < 0)
+        {
+            hungerLevel = 0;
+        }
     }
 
     private RaycastHit[] GetVisibleObjects()
@@ -174,10 +195,15 @@ public class SheepController : MonoBehaviour {
                 //TODO: This is quite ineffective if there is only one element
                 foreach (RaycastHit hit in hits)
                 {
-                    EdibleTrait trait = hit.transform.GetComponent<EdibleTrait>();
-                    if (trait)
+                    if(ReferenceEquals(hit.transform.gameObject, this.gameObject))
                     {
-                        traitHits.Add(trait);
+                        continue;
+                    }
+                    EdibleTrait edibleTrait = hit.transform.GetComponent<EdibleTrait>();
+                    MeatTrait meatTrait = hit.transform.GetComponent<MeatTrait>();
+                    if (edibleTrait && !meatTrait)
+                    {
+                        traitHits.Add(edibleTrait);
                     }
                 }
 

@@ -12,6 +12,7 @@ public class EdibleTrait : MonoBehaviour {
         {
             if (this.gameObject != null)
             {
+                Debug.Log("Killed");
                 Destroy(this.gameObject);
             }
         }
