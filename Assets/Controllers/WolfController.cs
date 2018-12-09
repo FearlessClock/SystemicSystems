@@ -44,6 +44,7 @@ public class WolfController : Animal {
     [Header("Scared state variables")]
     public float scaredSpeed;
     public float scaredTurnSpeed;
+    public float minimumScaredDistance;
 
     [Header("Hungry state variables")]
     public StateVariables hungryStateVars;
@@ -98,30 +99,70 @@ public class WolfController : Animal {
     /// </summary>
     internal GameObject[] CheckScaryThingsAround()
     {
-        scaredOfObjects.Clear();
-        RaycastHit[] surroundingObjects = GetThingsInView();
-
-        foreach (RaycastHit hit in surroundingObjects)
+        List<GameObject> scaryThings = new List<GameObject>();
+        if(scaredOfObjects.Count > 0)
         {
-            FlammableTrait flammableTrait = hit.transform.GetComponent<FlammableTrait>();
-            if (flammableTrait)
+            //Check all the scary things from last time
+            foreach (GameObject scaredObject in scaredOfObjects)
             {
-                if (flammableTrait.isBurning)
+                if (Helper.DistanceToVector(this.transform.position, scaredObject.transform.position) < minimumScaredDistance)
                 {
-                    scaredOfObjects.Add(flammableTrait.gameObject);
+                    scaryThings.Add(scaredObject);
                 }
-                continue;
             }
+            scaredOfObjects = scaryThings;
+            //scaredOfObjects.Clear();
+            RaycastHit[] surroundingObjects = GetThingsInView();
 
-            //Other scary traits for a sheep (Like wolves, coming soon)
+            foreach (RaycastHit hit in surroundingObjects)
+            {
+                if (!scaredOfObjects.Contains(hit.collider.gameObject))
+                {
+                    FlammableTrait flame = IsGOBurning(hit.collider.gameObject);
+                    if (flame)
+                    {
+                        scaredOfObjects.Add(flame.gameObject);
+                    }
+                }
+                //Other scary traits for a wolf
+            }
+        }
+        else
+        {
+            //scaredOfObjects.Clear();
+            RaycastHit[] surroundingObjects = GetThingsInView();
+
+            foreach (RaycastHit hit in surroundingObjects)
+            {
+                FlammableTrait flame = IsGOBurning(hit.collider.gameObject);
+                if (flame)
+                {
+                    scaredOfObjects.Add(flame.gameObject);
+                }
+                //Other scary traits for a wolf
+            }
         }
 
         return scaredOfObjects.ToArray();
     }
 
+    private FlammableTrait IsGOBurning(GameObject go)
+    {
+        FlammableTrait flammableTrait = go.GetComponent<FlammableTrait>();
+        if (flammableTrait)
+        {
+            if (flammableTrait.isBurning)
+            {
+                return flammableTrait;
+            }
+        }
+        return null;
+    }
+
     private void SetStateToScared()
     {
         currentState = eWolfStates.Scared;
+        //GetComponentInChildren<MeshRenderer>().materials[0].color = Color.green;
     }
 
     private void ScaredState()
@@ -140,6 +181,7 @@ public class WolfController : Animal {
             direction += (scaredObject.transform.position - this.transform.position).normalized * (1 - (distance/ viewDistance));
         }
         direction /= scaredOfObjects.Count;
+        direction.Normalize();
         MoveToTarget(this.transform.position + direction, scaredSpeed, scaredTurnSpeed);
     }
     private void UseFoodEnergy()
@@ -157,6 +199,7 @@ public class WolfController : Animal {
     {
         currentState = eWolfStates.Idle;
 
+        //GetComponentInChildren<MeshRenderer>().materials[0].color = Color.white;
         nextIdleTarget = GetRandomPointInsideCircle();
     }
 
@@ -182,6 +225,8 @@ public class WolfController : Animal {
     private void SetStateToHungry(RaycastHit[] hits)
     {
         currentState = eWolfStates.Hungry;
+
+        //GetComponentInChildren<MeshRenderer>().materials[0].color = Color.yellow;
         if (!FindFood(hits))
         {
             GetRandomPointInsideCircle();
@@ -322,6 +367,8 @@ public class WolfController : Animal {
     {
         currentState = eWolfStates.Attacking;
 
+        //GetComponentInChildren<MeshRenderer>().materials[0].color = Color.red;
+
         attackStateVars.target = thingToAttack.transform;
     }
 
@@ -364,6 +411,7 @@ public class WolfController : Animal {
     {
         currentState = eWolfStates.Eating;
 
+        //GetComponentInChildren<MeshRenderer>().materials[0].color = Color.black;
         eatingStateVars.target = trait.transform;
     }
 
