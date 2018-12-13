@@ -133,12 +133,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   currentState: 0
-  randomMovementObject: {fileID: 0}
   viewDistance: 2
   viewConeSize: 2
-  topLeft: {fileID: 0}
-  bottomRight: {fileID: 0}
+  idleMovementDistanceSize: 24
+  minDistanceToNode: 0.1
   viewRadius: 5
+  isAlive: 0
   speed: 2
   avoidanceAmount: 1
   target: {x: 0, y: 0, z: 0}
@@ -176,6 +176,11 @@ MonoBehaviour:
   maxHealth: 100
   currentHealth: 100
   isAlive: 1
+  thingDied:
+    m_PersistentCalls:
+      m_Calls: []
+    m_TypeName: UnityEngine.Events.UnityEvent, UnityEngine.CoreModule, Version=0.0.0.0,
+      Culture=neutral, PublicKeyToken=null
 --- !u!114 &114778188502764758
 MonoBehaviour:
   m_ObjectHideFlags: 1

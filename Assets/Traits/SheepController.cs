@@ -155,7 +155,8 @@ public class SheepController : Animal {
         {
             GetNewTargetVector();
         }
-        MoveWhileAvoidingThingsSheep();
+        //MoveWhileAvoidingThingsSheep();
+        RandomMoveOnNavMeshPath(speed, 1);
     }
 
     private void SetStateToHungry()
@@ -373,13 +374,22 @@ public class SheepController : Animal {
 
     private void OnDrawGizmosSelected()
     {
-
         Gizmos.color = Color.green;
         Gizmos.DrawWireSphere(this.transform.position, eatDistance);
         
         Vector3 origin = this.transform.position + this.transform.forward * (this.transform.localScale.x / 2 - moveTo.magnitude/2f);
         Gizmos.color = Color.red;
         Gizmos.DrawLine(origin, origin + moveTo * 5);
+        Gizmos.color = Color.blue;
+        Gizmos.DrawWireSphere(Vector3.zero, idleMovementDistanceSize);
+
+        if (Application.isPlaying && path != null)
+        {
+            foreach (GridCell cell in path)
+            {
+                Gizmos.DrawSphere(cell.position, 0.4f);
+            }
+        }
     }
 }
 
