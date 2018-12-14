@@ -12,6 +12,8 @@ public class SheepController : Animal {
 
     [Header("Movement")]
     public float speed;
+    [Range(0f, 1f)]
+    public float turnSpeed;
     public float avoidanceAmount;
     public Vector3 target;
     private bool targetExists;
@@ -21,7 +23,7 @@ public class SheepController : Animal {
 
     [Header("State stuff")]
     public SheepStates startingState;
-    private new Stack<SheepStates> currentState;
+    private Stack<SheepStates> currentState;
 
     [Header("Hungry state vars")]
     public float hungerLevel;
@@ -40,8 +42,7 @@ public class SheepController : Animal {
     protected override void Start () {
         base.Start();
         rb = this.GetComponent<Rigidbody>();
-        GetNewTargetVector();
-        targetExists = true;
+        targetExists = false;
         foundFood = false;
         targetEdibleTrait = null;
         currentState = new Stack<SheepStates>();
@@ -168,29 +169,36 @@ public class SheepController : Animal {
 
     private void HungryStateFunction()
     {
+        // If the sheep is hungry, get food!
         if (hungerLevel <= maxFoodLevel)
         {
             if (foundFood)
             {
-                if(Helper.DistanceToVector(this.transform.position, target) < eatDistance)
+                // If the sheep has reached the end of the path, walk straight to the target and eat
+                if(MoveOnPath(speed, turnSpeed))
                 {
-                    if(targetEdibleTrait != null)
+                    if (Helper.DistanceToVector(this.transform.position, target) < eatDistance)
                     {
-                        //TODO: Add cooldown to eating
-                        hungerLevel += targetEdibleTrait.GetFoodValue();
+                        if (targetEdibleTrait != null)
+                        {
+                            //TODO: Add cooldown to eating
+                            hungerLevel += targetEdibleTrait.GetFoodValue();
+                        }
+                        else
+                        {
+                            foundFood = false;
+                        }
                     }
                     else
                     {
-                        foundFood = false;
+                        MoveToTarget(target, speed, turnSpeed);
                     }
-                }
-                else
-                {
-                    MoveToPoint(foundFood);
                 }
             }
             else
             {
+                // Look for edible things in the enviroment.
+
                 RaycastHit[] hits = GetVisibleObjects();
                 List<EdibleTrait> traitHits = new List<EdibleTrait>();
                 //TODO: This is quite ineffective if there is only one element
@@ -201,15 +209,23 @@ public class SheepController : Animal {
                         continue;
                     }
                     EdibleTrait edibleTrait = hit.transform.GetComponent<EdibleTrait>();
-                    MeatTrait meatTrait = hit.transform.GetComponent<MeatTrait>();
-                    if (edibleTrait && !meatTrait)
+                    PlantTrait plantTrait = hit.transform.GetComponent<PlantTrait>();
+                    if (edibleTrait && plantTrait)
                     {
                         traitHits.Add(edibleTrait);
                     }
                 }
-
+                
+                if (traitHits.Count == 0)
+                {
+                    // If the sheep is close to its target or if it doesn't have one, get a new target
+                    if (MoveOnPath(speed, turnSpeed) || !targetExists)
+                    {
+                        GetNewTargetVector();
+                    }
+                }
                 //Get the closest edible thing
-                if (traitHits.Count == 1)
+                else if (traitHits.Count == 1)
                 {
                     targetEdibleTrait = traitHits[0];
                     target = hits[0].transform.position;
@@ -219,50 +235,24 @@ public class SheepController : Animal {
                 else if (traitHits.Count > 0)
                 {
                     float closestDistance = viewRadius * 2; //Make the  min more then it could possibly be
-                    GameObject closetObject = null;
+                    GameObject closetObject = traitHits[0].gameObject; //default the closest object to something 
+                    // Get the closest edible thing
                     foreach (EdibleTrait trait in traitHits)
                     {
-                        if (trait)
+                        float dis = Vector3.Distance(this.transform.position, trait.gameObject.transform.position);
+                        if (dis < closestDistance)
                         {
-                            float dis = Vector3.Distance(this.transform.position, trait.gameObject.transform.position);
-                            if (dis < closestDistance)
-                            {
-                                closestDistance = dis;
-                                closetObject = trait.gameObject;
-                                targetEdibleTrait = trait;
-                                foundFood = true;
-                            }
+                            closestDistance = dis;
+                            closetObject = trait.gameObject;
+                            targetEdibleTrait = trait;
+                            foundFood = true;
                         }
                     }
-                    if (foundFood)
-                    {
-                        if (closetObject != null)
-                        {
-                            target = closetObject.transform.position;
-                        }
-                        else
-                        {
-                            foundFood = false;
-                        }
-                    }
-                    else
-                    {
-                        if (foundFood && Vector3.Distance(this.transform.position, target) < minDistanceToTarget || !foundFood)
-                        {
-                            GetNewTargetVector();
-                        }
-                        MoveWhileAvoidingThingsSheep();
-                    }
+                    // If I found food, make it the target
+                    target = closetObject.transform.position;
                 }
-                else if(traitHits.Count == 0)
-                {
-                    if (targetExists && Helper.DistanceToVector(this.transform.position, target) < minDistanceToTarget || !targetExists)
-                    {
-                        GetNewTargetVector();
-                    }
-                    MoveWhileAvoidingThingsSheep();
-                }
-                MoveToPoint(foundFood);
+                // Either the sheep will be going to eat some food or it will roam
+                targetExists = !MoveOnPath(speed, turnSpeed);
             }
         }
         else
@@ -343,7 +333,7 @@ public class SheepController : Animal {
             }
         }
     }
-
+    [Obsolete("MoveToPoint is deprecated, please use MoveToTarget from Animal instead.")]
     public void MoveToPoint(bool targetExistance)
     {
         if (targetExistance)
@@ -360,6 +350,7 @@ public class SheepController : Animal {
         Vector3 newTarget = this.transform.position + UnityEngine.Random.insideUnitSphere*5;
         targetExists = true;
         target = newTarget;
+        SetPathToPoint(target);
     }
 
     

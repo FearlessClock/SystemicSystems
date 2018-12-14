@@ -26,6 +26,7 @@ GameObject:
   - component: {fileID: 198828601041841732}
   - component: {fileID: 199427941967120256}
   - component: {fileID: 114022543526594106}
+  - component: {fileID: 114091080833671896}
   m_Layer: 0
   m_Name: HayBale
   m_TagString: Untagged
@@ -113,6 +114,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   foodValue: 1
   amountOfFood: 10
+--- !u!114 &114091080833671896
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1615855539239606}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a784c4c8f3352a41a56efa9e32320e6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &114154420348495582
 MonoBehaviour:
   m_ObjectHideFlags: 1

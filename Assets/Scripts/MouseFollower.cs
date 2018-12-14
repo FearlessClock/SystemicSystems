@@ -25,8 +25,13 @@ public class MouseFollower : MonoBehaviour {
     public IEnumerator GetPathToMouse()
     {
         waiting = true;
-        path = navMeshInstance.GetPathBetweenTwoPoints(Vector3.zero, this.transform.position);
-        yield return new WaitForSeconds(0.1f);
+        GridCell targetCell = navMeshInstance.GetClosetOpenCell(this.transform.position, Vector3.zero);
+        GridCell startCell = navMeshInstance.GetClosetOpenCell(Vector3.zero, this.transform.position);
+        if (targetCell != null && startCell != null)
+        {
+            path = navMeshInstance.GetPathBetweenTwoPoints(startCell.position, targetCell.position);
+            yield return new WaitForSeconds(0.1f);
+        }
         waiting = false;
     }
 

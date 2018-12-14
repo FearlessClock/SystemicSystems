@@ -26,6 +26,7 @@ public class FlammableTrait : MonoBehaviour {
                 PutOutFire();
                 return;
             }
+            //TODO: Make this check if it can be lit on fire rather then lighting on fire
             //After a defined time, check if something burnable exists
             burnCheckTimer -= Time.deltaTime;
             if(burnCheckTimer <= 0)

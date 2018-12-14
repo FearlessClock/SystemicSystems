@@ -15,7 +15,8 @@ public class StateVariables
 }
 [SelectionBase]
 public class WolfController : Animal {
-    
+
+    public eWolfStates currentState;
     private List<GameObject> scaredOfObjects;
 
     [Header("Wolf stats")]

@@ -89,14 +89,40 @@ public class NavMeshGenerator : MonoBehaviour {
     public GridCell GetCellAtCoord(Vector3 coord)
     {
         Vector3 localCoord = coord - this.transform.position;
-        if(localCoord.x >= 0 && localCoord.x < grid.GetLength(0) && localCoord.z >= 0 && localCoord.z < grid.GetLength(1))
+        int localX = Mathf.RoundToInt(localCoord.x);
+        int localZ = Mathf.RoundToInt(localCoord.z);
+        if (localX >= 0 && localX < grid.GetLength(0) && localZ >= 0 && localZ < grid.GetLength(1))
         {
-            return grid[Mathf.RoundToInt(localCoord.x), Mathf.RoundToInt(localCoord.z)];
+            return grid[localX, localZ];
         }
         return null;
     }
 
-    public GridCell[] GetSurroundingCells(Vector3 coord)
+    /// <summary>
+    /// Returns the closest open cell to the target vector
+    /// </summary>
+    /// <param name="position"></param>
+    /// <param name="startPosition"></param>
+    /// <returns> Null if not found</returns>
+    public GridCell GetClosetOpenCell(Vector3 position, Vector3 startPosition)
+    {
+        int counter = 0;    // Keeps the loop from going on for eternity
+        GridCell goalCell = GetCellAtCoord(position);
+        if(goalCell == null)
+        {
+            return null;
+        }
+        while (goalCell.isBlocked && counter < 100)
+        {
+            counter++;
+            Vector3 directionUnit = (startPosition - position).normalized;
+            position += directionUnit;
+            goalCell = GetCellAtCoord(position);
+        }
+        return goalCell;
+    }
+
+    public GridCell[] GetSurroundingCells(Vector3 coord, bool returnBlockedCells)
     {
         List<GridCell> cells = new List<GridCell>();
         Vector3[] directions = new Vector3[8]
@@ -114,7 +140,7 @@ public class NavMeshGenerator : MonoBehaviour {
         {
             GridCell cell = GetCellAtCoord(coord + pos);
             //Debug.Log(coord + " " + pos + " " + cell);
-            if (cell != null && !cell.isBlocked)
+            if (cell != null && (returnBlockedCells || !cell.isBlocked))
             {
                 cells.Add(cell);
             }
@@ -157,7 +183,7 @@ public class NavMeshGenerator : MonoBehaviour {
             open.RemoveAt(0);
             closed.Add(currentCell);
 
-            GridCell[] surroundingCells = GetSurroundingCells(currentCell.position);
+            GridCell[] surroundingCells = GetSurroundingCells(currentCell.position, false);
 
             for (int i = 0; i < surroundingCells.Length; i++)
             {
@@ -264,7 +290,12 @@ public class NavMeshGenerator : MonoBehaviour {
     private void OnDrawGizmos()
     {
         if(Application.isPlaying){
-
+            GridCell closetCell = GetClosetOpenCell(new Vector3(13, 0, 13), sheep1.transform.position);
+            if(closetCell != null)
+            {
+                Gizmos.color = Color.blue;
+                Gizmos.DrawCube(closetCell.position, Vector3.one * 0.5f);
+            }
             GUIStyle style = new GUIStyle();
             style.fontSize = 10;
             if(globalGoal != null)
@@ -278,9 +309,9 @@ public class NavMeshGenerator : MonoBehaviour {
                     Vector3 thisPos = this.transform.position + new Vector3(i * gridStepSize, 0, j * gridStepSize);
                     if(lastCalculatedTarget == grid[i, j].position)
                     {
-                        Handles.Label(thisPos + new Vector3(1, 0, 1) * 0.2f, "F: " + grid[i, j].fScore.ToString(), style);
-                        Handles.Label(thisPos + new Vector3(-1, 0, 1) * 0.3f, "G: " + grid[i, j].gScore.ToString(), style);
-                        Handles.Label(thisPos - new Vector3(1, 0, 1) * 0.3f, "H: " + grid[i, j].hScore.ToString(), style);
+                        //Handles.Label(thisPos + new Vector3(1, 0, 1) * 0.2f, "F: " + grid[i, j].fScore.ToString(), style);
+                        //Handles.Label(thisPos + new Vector3(-1, 0, 1) * 0.3f, "G: " + grid[i, j].gScore.ToString(), style);
+                        //Handles.Label(thisPos - new Vector3(1, 0, 1) * 0.3f, "H: " + grid[i, j].hScore.ToString(), style);
                         if (grid[i, j].parent != null)
                         {
                             Vector3 dir = grid[i, j].parent.position - grid[i, j].position;
@@ -299,9 +330,9 @@ public class NavMeshGenerator : MonoBehaviour {
                         //        Gizmos.DrawLine(thisPos, cell.position);
                         //    }
                         //}
-                        Handles.Label(thisPos + new Vector3(1, 0, 1) * 0.2f,    "F: " + grid[i, j].fScore.ToString(), style);
-                        Handles.Label(thisPos + new Vector3(-1, 0, 1) * 0.3f,         "G: " + grid[i, j].gScore.ToString(), style);
-                        Handles.Label(thisPos - new Vector3(1, 0, 1) * 0.3f,    "H: " + grid[i, j].hScore.ToString(), style);
+                        //Handles.Label(thisPos + new Vector3(1, 0, 1) * 0.2f,    "F: " + grid[i, j].fScore.ToString(), style);
+                        //Handles.Label(thisPos + new Vector3(-1, 0, 1) * 0.3f,         "G: " + grid[i, j].gScore.ToString(), style);
+                        //Handles.Label(thisPos - new Vector3(1, 0, 1) * 0.3f,    "H: " + grid[i, j].hScore.ToString(), style);
                         if(grid[i, j].parent != null)
                         {
                             Vector3 dir = grid[i, j].parent.position - grid[i, j].position;

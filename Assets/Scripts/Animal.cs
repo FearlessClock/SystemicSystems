@@ -7,7 +7,6 @@ using System.Collections.Generic;
 /// </summary>
 public class Animal : MonoBehaviour
 {
-    public eWolfStates currentState;
     protected Rigidbody rb;
     protected Transform randomMovementObject;
     [Header("View variables")]
@@ -25,22 +24,34 @@ public class Animal : MonoBehaviour
     private Vector3 nextTargetPoint = Vector3.zero;
     [Header("NavMesh navigation")]
     public float minDistanceToNode;
-    private bool getNewPath = true;
 
     protected virtual void Start()
     {
         randomMovementObject = new GameObject("RandomPosition").GetComponent<Transform>();
-        path = new Stack<GridCell>();
+        path = null;
         navMeshInstance = NavMeshGenerator.instance;
     }
+
     protected virtual void Update()
     {
+        // Don't delete this, I override it in the sub classes
     }
-
-    protected void GetPathToPoint(Vector3 target)
+    /// <summary>
+    /// Carefull! This overwrites the existing path
+    /// </summary>
+    /// <param name="target"></param>
+    protected bool SetPathToPoint(Vector3 target)
     {
-        Debug.Log(this.transform.position + " " + target);
-        path = navMeshInstance.GetPathBetweenTwoPoints(this.transform.position, target);
+        // Get the closest cell to the target and then path to that target
+        GridCell targetCell = navMeshInstance.GetClosetOpenCell(target, this.transform.position);
+        if(targetCell != null)
+        {
+            //Debug.Log(this.transform.position + " " + target + " Closest target pos: " + targetCell.position);
+            path = navMeshInstance.GetPathBetweenTwoPoints(this.transform.position, targetCell.position);
+            GetNextPointTarget();
+            return path != null;
+        }
+        return false;
     }
 
     protected void GetNextPointTarget()
@@ -50,12 +61,51 @@ public class Animal : MonoBehaviour
             nextTargetPoint = path.Pop().position;
         }
     }
+    /// <summary>
+    /// Move the animal on the path stack
+    /// </summary>
+    /// <param name="speed"></param>
+    /// <param name="turnSpeed"></param>
+    /// <returns> True if the path is finished or non existant and false if it can still move</returns>
+    protected bool MoveOnPath(float speed, float turnSpeed)
+    {
+        if(path == null)
+        {
+            return true;
+        }
+        else
+        {
+            float dis = Helper.DistanceToVector(this.transform.position, nextTargetPoint);
+
+            if (dis < minDistanceToNode)
+            {
+                // If there are no nodes left, get a new path
+                if (path.Count == 0)
+                {
+                    // To stop the code form always checking the distance
+                    path = null;
+                    return true;
+                }
+
+                //If there are nodes, get the next point to go to
+                if (path != null && path.Count > 0)
+                {
+                    GetNextPointTarget();
+                }
+            }
+            else
+            {
+                MoveToTarget(nextTargetPoint, speed, turnSpeed);
+            }
+        }
+        return false;
+    }
 
     protected void RandomMoveOnNavMeshPath(float speed, float turnSpeed)
     {
         if(path == null)
         {
-            GetPathToPoint(GetRandomPointInsideCircle());
+            SetPathToPoint(GetRandomPointInsideCircle());
         }
         else if(path != null)
         {
@@ -66,7 +116,7 @@ public class Animal : MonoBehaviour
                 // If there are no nodes left, get a new path
                 if (path.Count == 0)
                 {
-                    GetPathToPoint(GetRandomPointInsideCircle());
+                    SetPathToPoint(GetRandomPointInsideCircle());
                 }
 
                 //If there are nodes, get the next point to go to
